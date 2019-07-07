@@ -95,7 +95,9 @@
 ;; interp. a list of Invaders
 
 (define LOI1 empty)
-(define LOI2 (cons (make-invader 150 100 12) (cons (make-invader 150 HEIGHT -10) empty)))
+(define LOI2 (cons (make-invader 150 100 12)
+                   (cons (make-invader 150 HEIGHT -10)
+                         (cons (make-invader 150 (+ HEIGHT 10) 10) empty))))
 
 #;
 (define (fn-for-loi loi)
@@ -132,7 +134,9 @@
 ;; interp. a list of Missiles
 
 (define LOM1 empty)
-(define LOM2 (cons (make-missile 150 300) (cons (make-missile (invader-x I1) (+ (invader-y I1) 10)) empty)))
+(define LOM2 (cons (make-missile 150 300)
+                   (cons (make-missile (invader-x I1) (+ (invader-y I1) 10))
+                         (cons (make-missile (invader-x I1) (+ (invader-y I1)  5)) empty))))
 
 #;
 (define (fn-for-lom lom)
@@ -162,8 +166,8 @@
 ;; Game -> Game
 ;; start the world with (main G0)
 ;; 
-(define (main g)
-  (big-bang g                        ; Game
+(define (main s)
+  (big-bang s                        ; Game
     (on-tick   advance-game)         ; Game -> Game
     (to-draw    render-game)         ; Game -> Image
     (stop-when    stop-game)         ; Game -> Boolean
@@ -171,22 +175,77 @@
 
 ;; Game -> Game
 ;; produce the next game
-;; !!!
-(define (advance-game g) g) ;stub
+;; Game is (make-game  ListOfInvader ListOfMissile Tank)
+(check-expect (advance-game
+               (make-game empty empty T0)) 
+              (make-game  (advance-invader LOI1) (advance-missile LOM1) (advance-tank T0)))
+(check-expect (advance-game
+               (make-game LOI2 LOM2 T1))
+              (make-game (advance-invader LOI2) (advance-missile LOM2) (advance-tank T1)))
 
+;(define (advance-game s) s) ;stub
+
+;; Took template from Game
+
+(define (advance-game s)
+  (make-game (advance-invader (game-invaders s))
+             (advance-missile (game-missiles s))
+             (advance-tank (game-tank s))))
+
+
+;; ListOfInvader -> ListOfInvader
+;; Produce the next invader x,y,dx positions on the screen
+;; !!!
+(define (advance-invader loi) loi) ;stub
+
+
+;; ListOfMissile -> ListOfMissile
+;; Produce the next missile x,y positions on the screen
+;; !!!
+(define (advance-missile lom) lom) ;stub
+
+
+;; Tank -> Tank
+;; Product the next tank x position and dir on the screen
+(check-expect (advance-tank (make-tank (/ WIDTH 2) 1))
+              (make-tank (+ (/ WIDTH 2) TANK-SPEED) 1))
+(check-expect (advance-tank (make-tank 50 1))
+              (make-tank (+ 50 TANK-SPEED) 1))          
+(check-expect (advance-tank (make-tank (+ WIDTH 2) 1))
+              (make-tank WIDTH 1))
+(check-expect (advance-tank (make-tank 50 -1))
+              (make-tank (- 50 TANK-SPEED) -1))         
+(check-expect (advance-tank (make-tank (- 0 2) -1))
+              (make-tank 0 -1))
+
+;(define (advance-tank t) (make-tank (/ WIDTH 2) 1)) ;stub
+
+;; Took template from tank
+
+(define (advance-tank t)
+  (cond [(and
+          (> (tank-x  t) WIDTH)
+          (= (tank-dir t) 1))
+         (make-tank WIDTH (tank-dir t))]
+        [(and 
+          (< (tank-x  t)     0)
+          (= (tank-dir t) -1))
+         (make-tank 0 (tank-dir t))]
+        [(= (tank-dir t)  1) (make-tank (+ (tank-x t) TANK-SPEED) (tank-dir t))]
+        [(= (tank-dir t) -1) (make-tank (- (tank-x t) TANK-SPEED) (tank-dir t))]))
 
 
 ;; Game -> Image
 ;; render the game
 ;; !!!
-(define (render-game g) BACKGROUND) ;stub
+(define (render-game s) BACKGROUND) ;stub
 
 
 
 ;; Game -> Boolean
 ;; When Invader reaches the bottom of the screen, the game is over. 
 ;; !!!
-(define (stop-game g) false)
+(define (stop-game s) false)
 
 
 
@@ -196,7 +255,7 @@
 ;;           - right: move the tank to right at a constant speed
 ;;           - space bar: fire missiles straight up from the tank current position
 ;; !!!
-(define (handle-key g ke) g) ;stub
+(define (handle-key s ke) s) ;stub
 
 
 
