@@ -178,10 +178,10 @@
 ;; Game is (make-game  ListOfInvader ListOfMissile Tank)
 (check-expect (advance-game
                (make-game empty empty T0)) 
-              (make-game  (advance-invader LOI1) (advance-missile LOM1) (advance-tank T0)))
+              (make-game  (advance-invader LOI1) empty T0))
 (check-expect (advance-game
                (make-game LOI2 LOM2 T1))
-              (make-game (advance-invader LOI2) (advance-missile LOM2) (advance-tank T1)))
+              (make-game (advance-invader LOI2) LOM2 T1))
 
 ;(define (advance-game s) s) ;stub
 
@@ -189,8 +189,8 @@
 
 (define (advance-game s)
   (make-game (advance-invader (game-invaders s))
-             (advance-missile (game-missiles s))
-             (advance-tank (game-tank s))))
+             (game-missiles s)
+             (game-tank s)))
 
 
 ;; ListOfInvader -> ListOfInvader
@@ -206,7 +206,7 @@
 
 
 ;; Tank -> Tank
-;; Product the next tank x position and dir on the screen
+;; Produce the next tank x position and it's dir on the screen
 (check-expect (advance-tank (make-tank (/ WIDTH 2) 1))
               (make-tank (+ (/ WIDTH 2) TANK-SPEED) 1))
 (check-expect (advance-tank (make-tank 50 1))
@@ -237,8 +237,33 @@
 
 ;; Game -> Image
 ;; render the game
-;; !!!
-(define (render-game s) BACKGROUND) ;stub
+(check-expect (render-game (make-game empty empty T0))
+              (render-tank T0))
+(check-expect (render-game (make-game LOI2 LOM2 T1))
+              (render-tank T1))
+
+              
+;(define (render-game s) BACKGROUND) ;stub
+
+;; Took template from Game
+
+(define (render-game s)
+       (render-tank (game-tank s)))
+
+
+;; Tank -> Image
+;; render the tank image at the correct location in the screen coordinates
+(check-expect (render-tank T0)
+              (place-image TANK (/ WIDTH 2) (- HEIGHT TANK-HEIGHT/2)  BACKGROUND))
+(check-expect (render-tank T1)
+              (place-image TANK 50 (- HEIGHT TANK-HEIGHT/2)  BACKGROUND))
+
+;(define (render-tank t) TANK) ;stub
+
+;; Took template from Tank
+
+(define (render-tank t)
+  (place-image TANK (tank-x t) (- HEIGHT TANK-HEIGHT/2) BACKGROUND))
 
 
 
