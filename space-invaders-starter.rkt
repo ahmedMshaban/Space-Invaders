@@ -14,7 +14,7 @@
 
 (define INVADER-X-SPEED 1.5)  ;speeds (not velocities) in pixels per tick
 (define INVADER-Y-SPEED 1.5)
-(define TANK-SPEED 10)
+(define TANK-SPEED 30)
 (define MISSILE-SPEED 10)
 
 (define HIT-RANGE 10)
@@ -78,9 +78,9 @@
 ;; interp. the invader is at (x, y) in screen coordinates
 ;;         the invader along x by dx pixels per clock tick
 
-(define I1 (make-invader 150 100 12))           ;not landed, moving right
-(define I2 (make-invader 150 HEIGHT -10))       ;exactly landed, moving left
-(define I3 (make-invader 150 (+ HEIGHT 10) 10)) ;> landed, moving right
+(define I1 (make-invader 150 100 1.5))           ;not landed, moving right
+(define I2 (make-invader 150 HEIGHT -1.5))       ;exactly landed, moving left
+(define I3 (make-invader 150 (+ HEIGHT 10) 1.5)) ;> landed, moving right
 
 
 #;
@@ -178,26 +178,70 @@
 ;; Game is (make-game  ListOfInvader ListOfMissile Tank)
 (check-expect (advance-game
                (make-game empty empty T0)) 
-              (make-game  (advance-invader LOI1) empty T0))
+              (make-game  (list-of-invader LOI1) empty T0))
 (check-expect (advance-game
                (make-game LOI2 LOM2 T1))
-              (make-game (advance-invader LOI2) LOM2 T1))
+              (make-game (list-of-invader LOI2) LOM2 T1))
 
 ;(define (advance-game s) s) ;stub
 
 ;; Took template from Game
 
 (define (advance-game s)
-  (make-game (advance-invader (game-invaders s))
+  (make-game (list-of-invader (game-invaders s))
              (game-missiles s)
              (game-tank s)))
 
 
 ;; ListOfInvader -> ListOfInvader
-;; Produce the next invader x,y,dx positions on the screen
-;; !!!
-(define (advance-invader loi) loi) ;stub
+;; Produce a list of invadres with the correct x,y and dx values
+(check-expect (list-of-invader empty) empty)
+(check-expect (list-of-invader
+               (cons (make-invader 150 100 1.5)
+                   (cons (make-invader 150 HEIGHT -1.5)
+                         (cons (make-invader 150 (+ HEIGHT 10) 1.5) empty))))
+              (cons (make-invader (+ 150 INVADER-X-SPEED) (+ 100 INVADER-Y-SPEED) 1.5)
+                    (cons (make-invader (- 150 INVADER-X-SPEED) (+ HEIGHT INVADER-Y-SPEED) -1.5)
+                          (cons (make-invader (+ 150 INVADER-X-SPEED) (+ (+ HEIGHT 10) INVADER-Y-SPEED) 1.5) empty))))
 
+
+;(define (list-of-invader loi) empty) ;stub
+
+;; Took template from ListOfInvader
+
+(define (list-of-invader loi)
+  (cond [(empty? loi) empty]
+        [else
+         (cons (advance-invader (first loi))
+              (list-of-invader (rest loi)))]))
+
+
+;; Invader -> Invader
+;; Produce the next invader x,y,dx positions on the screen
+(check-expect (advance-invader (make-invader 150 100 1.5))
+              (make-invader (+ 150 INVADER-X-SPEED) (+ 100 INVADER-Y-SPEED) 1.5))
+(check-expect (advance-invader (make-invader 150 HEIGHT -1.5))
+              (make-invader (- 150 INVADER-X-SPEED) (+ HEIGHT INVADER-Y-SPEED) -1.5))
+(check-expect (advance-invader (make-invader WIDTH 100 1.5))
+              (make-invader (- WIDTH (/ (image-width INVADER) 2)) (+ 100 INVADER-Y-SPEED) -1.5))
+(check-expect (advance-invader (make-invader 0 100 -1.5))
+              (make-invader (/ (image-width INVADER) 2) (+ 100 INVADER-Y-SPEED) 1.5))
+
+;(define (advance-invader invader) (make-invader 150 100 INVADER-X-SPEED)) ;stub
+
+;; Took template from Invader
+
+(define (advance-invader invader)
+  (cond [(and
+          (>= (invader-x invader) WIDTH)
+          (positive? (invader-dx invader)))
+         (make-invader (- WIDTH (/ (image-width INVADER) 2)) (+ (invader-y invader) INVADER-Y-SPEED) (- INVADER-X-SPEED))]
+        [(and
+          (<= (invader-x invader) 0)
+          (negative? (invader-dx invader)))
+         (make-invader (/ (image-width INVADER) 2) (+ (invader-y invader) INVADER-Y-SPEED) INVADER-X-SPEED)]
+        [(negative? (invader-dx invader)) (make-invader (- (invader-x invader) INVADER-X-SPEED) (+ (invader-y invader) INVADER-Y-SPEED) (invader-dx invader)) ]
+        [else (make-invader (+ (invader-x invader) INVADER-X-SPEED) (+ (invader-y invader) INVADER-Y-SPEED) (invader-dx invader))]))
 
 ;; ListOfMissile -> ListOfMissile
 ;; Produce the next missile x,y positions on the screen
@@ -258,11 +302,11 @@
              
 ;(define (handle-key s ke) s) ;stub
 
-
 (define (handle-key s ke)
   (cond [(key=? ke "left") (make-game (game-invaders s) (game-missiles s) (advance-tank (tank-diraction (game-tank s) "left")))]
         [(key=? ke "right") (make-game (game-invaders s) (game-missiles s) (advance-tank (tank-diraction (game-tank s) "right")))]
         [else  s]))
+
 
 ;; Tank String -> Tank
 ;; Produce the correct tank dirction based on the key click 
