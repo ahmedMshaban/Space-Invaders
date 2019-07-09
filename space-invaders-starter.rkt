@@ -3,7 +3,6 @@
 #reader(lib "htdp-beginner-abbr-reader.ss" "lang")((modname space-invaders-starter) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t constructor repeating-decimal #f #t none #f () #f)))
 (require 2htdp/universe)
 (require 2htdp/image)
-
 ;; Space Invaders
 
 
@@ -14,7 +13,7 @@
 
 (define INVADER-X-SPEED 1.5)  ;speeds (not velocities) in pixels per tick
 (define INVADER-Y-SPEED 1.5)
-(define TANK-SPEED 30)
+(define TANK-SPEED 2)
 (define MISSILE-SPEED 10)
 
 (define HIT-RANGE 10)
@@ -178,10 +177,10 @@
 ;; Game is (make-game  ListOfInvader ListOfMissile Tank)
 (check-expect (advance-game
                (make-game empty empty T0)) 
-              (make-game  (list-of-invader LOI1) empty T0))
+              (make-game  (list-of-invader LOI1) empty (advance-tank T0)))
 (check-expect (advance-game
                (make-game LOI2 LOM2 T1))
-              (make-game (list-of-invader LOI2) LOM2 T1))
+              (make-game (list-of-invader LOI2) LOM2 ( advance-tank T1)))
 
 ;(define (advance-game s) s) ;stub
 
@@ -190,7 +189,7 @@
 (define (advance-game s)
   (make-game (list-of-invader (game-invaders s))
              (game-missiles s)
-             (game-tank s)))
+             (advance-tank (game-tank s))))
 
 
 ;; ListOfInvader -> ListOfInvader
@@ -248,37 +247,126 @@
 ;; !!!
 (define (advance-missile lom) lom) ;stub
 
+;; Tank -> Tank
+;; Produce the next tank x position and it's dir on the screen
+(check-expect (advance-tank (make-tank (/ WIDTH 2) 1))
+              (make-tank (+ (/ WIDTH 2) TANK-SPEED) 1))
+(check-expect (advance-tank (make-tank 50 1))
+              (make-tank (+ 50 TANK-SPEED) 1))          
+(check-expect (advance-tank (make-tank (+ WIDTH 2) 1))
+              (make-tank (- WIDTH (/ (image-width TANK) 2)) -1))
+(check-expect (advance-tank (make-tank 50 -1))
+              (make-tank (- 50 TANK-SPEED) -1))         
+(check-expect (advance-tank (make-tank (- 0 2) -1))
+              (make-tank (/ (image-width TANK) 2) 1))
+
+;(define (advance-tank t) (make-tank (/ WIDTH 2) 1)) ;stub
+
+;; Took template from tank
+
+(define (advance-tank t)
+  (cond [(and
+          (> (tank-x  t) (- WIDTH (image-width TANK)))
+          (= (tank-dir t) 1))
+         (make-tank (- WIDTH (/ (image-width TANK) 2)) (-(tank-dir t)))]
+        [(and 
+          (< (tank-x  t) (image-width TANK))
+          (= (tank-dir t) -1))
+         (make-tank (/ (image-width TANK) 2) (* (tank-dir t) -1))]
+        [(= (tank-dir t)  1) (make-tank (+ (tank-x t) TANK-SPEED) (tank-dir t))]
+        [(= (tank-dir t) -1) (make-tank (- (tank-x t) TANK-SPEED) (tank-dir t))]))
+
 
 ;; Game -> Image
 ;; render the game
 (check-expect (render-game (make-game empty empty T0))
-              (render-tank T0))
+              (place-images
+               (list
+                (render-tank-img T0)
+                (render-inavder-image empty)
+                (render-missile-image empty))
+               (list 
+                (render-tank-pos T0)
+                (render-inavder-pos empty)
+                (render-missile-pos empty))
+               BACKGROUND))
 (check-expect (render-game (make-game LOI2 LOM2 T1))
-              (render-tank T1))
-
-              
+              (place-images
+               (list
+                (render-tank-img T1)
+                (render-inavder-image LOI2)
+                (render-missile-image LOM2))
+               (list 
+                (render-tank-pos T1)
+                (render-inavder-pos LOI2)
+                (render-missile-pos LOM2))
+               BACKGROUND))
+       
 ;(define (render-game s) BACKGROUND) ;stub
 
 ;; Took template from Game
 
 (define (render-game s)
-  (render-tank (game-tank s)))
+  (place-images
+   (list
+    (render-tank-img (game-tank s))
+    (render-inavder-image (game-invaders s))
+    (render-missile-image (game-missiles s)))
+   (list 
+    (render-tank-pos (game-tank s))
+    (render-inavder-pos (game-invaders s))
+    (render-missile-pos (game-missiles s)))
+   BACKGROUND))
 
 
 ;; Tank -> Image
-;; render the tank image at the correct location in the screen coordinates
-(check-expect (render-tank T0)
-              (place-image TANK (/ WIDTH 2) (- HEIGHT TANK-HEIGHT/2)  BACKGROUND))
-(check-expect (render-tank T1)
-              (place-image TANK 50 (- HEIGHT TANK-HEIGHT/2)  BACKGROUND))
+;; Produce the tank image
+(check-expect (render-tank-img T0) TANK)
+(check-expect (render-tank-img T1) TANK)
 
-;(define (render-tank t) TANK) ;stub
+;(define (render-tank-img t) TANK) ;stub
 
 ;; Took template from Tank
 
-(define (render-tank t)
-  (place-image TANK (tank-x t) (- HEIGHT TANK-HEIGHT/2) BACKGROUND))
+(define (render-tank-img t) TANK)
 
+
+
+;; Tank -> Posn
+;; render the tank image at the correct location in the screen coordinates
+(check-expect (render-tank-pos T0) (make-posn (/ WIDTH 2) (- HEIGHT TANK-HEIGHT/2)))
+(check-expect (render-tank-pos T1) (make-posn 50 (- HEIGHT TANK-HEIGHT/2)))
+
+;(define (render-tank-pos t) (make-posn 0 0)) ;stub
+
+;; Took Template from Tank
+
+(define (render-tank-pos t)
+  (make-posn (tank-x t) (- HEIGHT TANK-HEIGHT/2)))
+
+
+
+;; ListOfInvader -> Image
+;; Produce the inavder image
+;; !!!
+(define (render-inavder-image loi) empty-image) ;stub
+
+
+;; ListOfInvader -> ListOfInvader
+;; Produce the inavders positions
+;; !!!
+(define (render-inavder-pos loi) (make-posn 0 0)) ;stub
+
+;; ListOfMissile -> Image
+;; Produce the missile image
+;; !!!
+(define (render-missile-image lom) empty-image) ;stub
+
+
+;; ListOfMissile -> ListOfMissile
+;; Produce the missiles positions
+;; !!!
+(define (render-missile-pos loi) (make-posn 0 0)) ;stub
 
 
 ;; Game -> Boolean
@@ -294,17 +382,17 @@
 ;;           - right: move the tank to right at a constant speed
 ;;           - space bar: fire missiles straight up from the tank current position
 (check-expect (handle-key (make-game empty empty T0) "left")
-              (make-game empty empty (advance-tank (make-tank (/ WIDTH 2) -1))))
+              (make-game empty empty (tank-diraction T0 "left")))
 (check-expect (handle-key (make-game empty empty T0) "right")
-              (make-game empty empty (advance-tank (make-tank (/ WIDTH 2) 1))))
+              (make-game empty empty (tank-diraction T0 "right")))
 (check-expect (handle-key (make-game empty empty T0) "up")
               (make-game empty empty T0))
              
 ;(define (handle-key s ke) s) ;stub
 
 (define (handle-key s ke)
-  (cond [(key=? ke "left") (make-game (game-invaders s) (game-missiles s) (advance-tank (tank-diraction (game-tank s) "left")))]
-        [(key=? ke "right") (make-game (game-invaders s) (game-missiles s) (advance-tank (tank-diraction (game-tank s) "right")))]
+  (cond [(key=? ke "left") (make-game (game-invaders s) (game-missiles s) (tank-diraction (game-tank s) "left"))]
+        [(key=? ke "right") (make-game (game-invaders s) (game-missiles s) (tank-diraction (game-tank s) "right"))]
         [else  s]))
 
 
@@ -329,32 +417,3 @@
           (string=? ke "right")
           (= (tank-dir t) -1)) (make-tank (tank-x t) 1)]
         [else  t]))
-
-;; Tank -> Tank
-;; Produce the next tank x position and it's dir on the screen
-(check-expect (advance-tank (make-tank (/ WIDTH 2) 1))
-              (make-tank (+ (/ WIDTH 2) TANK-SPEED) 1))
-(check-expect (advance-tank (make-tank 50 1))
-              (make-tank (+ 50 TANK-SPEED) 1))          
-(check-expect (advance-tank (make-tank (+ WIDTH 2) 1))
-              (make-tank (- WIDTH (/ (image-width TANK) 2)) 1))
-(check-expect (advance-tank (make-tank 50 -1))
-              (make-tank (- 50 TANK-SPEED) -1))         
-(check-expect (advance-tank (make-tank (- 0 2) -1))
-              (make-tank (/ (image-width TANK) 2) -1))
-
-;(define (advance-tank t) (make-tank (/ WIDTH 2) 1)) ;stub
-
-;; Took template from tank
-
-(define (advance-tank t)
-  (cond [(and
-          (> (tank-x  t) (- WIDTH (image-width TANK)))
-          (= (tank-dir t) 1))
-         (make-tank (- WIDTH (/ (image-width TANK) 2)) (tank-dir t))]
-        [(and 
-          (< (tank-x  t) (image-width TANK))
-          (= (tank-dir t) -1))
-         (make-tank (/ (image-width TANK) 2) (tank-dir t))]
-        [(= (tank-dir t)  1) (make-tank (+ (tank-x t) TANK-SPEED) (tank-dir t))]
-        [(= (tank-dir t) -1) (make-tank (- (tank-x t) TANK-SPEED) (tank-dir t))]))
