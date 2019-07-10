@@ -197,8 +197,8 @@
 (check-expect (list-of-invader empty) empty)
 (check-expect (list-of-invader
                (cons (make-invader 150 100 1.5)
-                   (cons (make-invader 150 HEIGHT -1.5)
-                         (cons (make-invader 150 (+ HEIGHT 10) 1.5) empty))))
+                     (cons (make-invader 150 HEIGHT -1.5)
+                           (cons (make-invader 150 (+ HEIGHT 10) 1.5) empty))))
               (cons (make-invader (+ 150 INVADER-X-SPEED) (+ 100 INVADER-Y-SPEED) 1.5)
                     (cons (make-invader (- 150 INVADER-X-SPEED) (+ HEIGHT INVADER-Y-SPEED) -1.5)
                           (cons (make-invader (+ 150 INVADER-X-SPEED) (+ (+ HEIGHT 10) INVADER-Y-SPEED) 1.5) empty))))
@@ -212,7 +212,7 @@
   (cond [(empty? loi) empty]
         [else
          (cons (advance-invader (first loi))
-              (list-of-invader (rest loi)))]))
+               (list-of-invader (rest loi)))]))
 
 
 
@@ -246,12 +246,15 @@
 
 
 ;; ListOfMissile -> ListOfMissile
-;; Produce a list of missile with the correct x,y positions 
+;; produce filtered and ticked list of missile
 (check-expect (list-of-missile empty) empty)
 (check-expect (list-of-missile LOM2)
               (cons (make-missile  150  (- 300 MISSILE-SPEED))
                     (cons (make-missile (invader-x I1) (- (+ (invader-y I1) 10) MISSILE-SPEED))
-                         (cons (make-missile  (invader-x I1)  (- (+ (invader-y I1)  5) MISSILE-SPEED)) empty))))
+                          (cons (make-missile  (invader-x I1)  (- (+ (invader-y I1)  5) MISSILE-SPEED)) empty))))
+(check-expect (list-of-missile (cons (make-missile 150 0)
+                                     (cons (make-missile 150 300) empty)))
+              (cons (make-missile 150 (- 300 MISSILE-SPEED)) empty))
 
 ;(define (list-of-missile lom) lom) ;stub
 
@@ -260,8 +263,10 @@
 (define (list-of-missile lom)
   (cond [(empty? lom) empty]
         [else
-         (cons (advance-missile (first lom))
-               (list-of-missile (rest lom)))]))
+         (if  (not (outside-world? (first lom)))
+              (cons (advance-missile (first lom)) (list-of-missile (rest lom)))
+              (list-of-missile (rest lom)))]))
+
 
 
 ;; Missile -> Missile
@@ -277,6 +282,22 @@
 
 (define (advance-missile m)
   (make-missile  (missile-x m) (- (missile-y m) MISSILE-SPEED)))
+
+
+
+;; Missile -> Boolean
+;; Product true if the Missile outside-world, otherwise false
+(check-expect (outside-world? (make-missile 20 30)) false)
+(check-expect (outside-world? (make-missile 50 0)) true) 
+
+;(define (outside-world? m) false) ;stub
+
+;; Took template from Missile
+
+(define (outside-world? m)
+  (<= (missile-y m) 0))
+
+
 
 ;; Tank -> Tank
 ;; Produce the next tank x position and it's dir on the screen
@@ -353,7 +374,7 @@
   (cond [(empty? loi) (misslie-image lom)]
         [else
          (place-image  INVADER (invader-x-posn (first loi)) (invader-y-posn (first loi))
-              (invader-image (rest loi) lom))]))
+                       (invader-image (rest loi) lom))]))
 
 
 
@@ -400,7 +421,7 @@
   (cond [(empty? lom) BACKGROUND]
         [else
          (place-image  MISSILE (missile-x-posn (first lom)) (missile-y-posn (first lom))
-              (misslie-image (rest lom)))]))
+                       (misslie-image (rest lom)))]))
 
 
 ;; Missile -> Number
