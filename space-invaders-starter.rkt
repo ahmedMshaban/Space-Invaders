@@ -177,10 +177,10 @@
 ;; Game is (make-game  ListOfInvader ListOfMissile Tank)
 (check-expect (advance-game
                (make-game empty empty T0)) 
-              (make-game  (list-of-invader LOI1) empty (advance-tank T0)))
+              (make-game  (list-of-invader LOI1) (list-of-missile empty) (advance-tank T0)))
 (check-expect (advance-game
                (make-game LOI2 LOM2 T1))
-              (make-game (list-of-invader LOI2) LOM2 ( advance-tank T1)))
+              (make-game (list-of-invader LOI2) (list-of-missile LOM2) ( advance-tank T1)))
 
 ;(define (advance-game s) s) ;stub
 
@@ -188,7 +188,7 @@
 
 (define (advance-game s)
   (make-game (list-of-invader (game-invaders s))
-             (game-missiles s)
+             (list-of-missile (game-missiles s))
              (advance-tank (game-tank s))))
 
 
@@ -215,8 +215,9 @@
               (list-of-invader (rest loi)))]))
 
 
+
 ;; Invader -> Invader
-;; Produce the next invader x,y,dx positions on the screen
+;; Produce the next invader x,y,dx positions on the screen by (add INVADER-X-SPEED to the x) and (INVADER-Y-SPEED to the y)
 (check-expect (advance-invader (make-invader 150 100 1.5))
               (make-invader (+ 150 INVADER-X-SPEED) (+ 100 INVADER-Y-SPEED) 1.5))
 (check-expect (advance-invader (make-invader 150 HEIGHT -1.5))
@@ -245,11 +246,37 @@
 
 
 ;; ListOfMissile -> ListOfMissile
-;; Produce the next missile x,y positions on the screen
-;; !!!
-(define (advance-missile lom) lom) ;stub
+;; Produce a list of missile with the correct x,y positions 
+(check-expect (list-of-missile empty) empty)
+(check-expect (list-of-missile LOM2)
+              (cons (make-missile  150  (- 300 MISSILE-SPEED))
+                    (cons (make-missile (invader-x I1) (- (+ (invader-y I1) 10) MISSILE-SPEED))
+                         (cons (make-missile  (invader-x I1)  (- (+ (invader-y I1)  5) MISSILE-SPEED)) empty))))
+
+;(define (list-of-missile lom) lom) ;stub
+
+;; Took tempalte from ListOfMissile
+
+(define (list-of-missile lom)
+  (cond [(empty? lom) empty]
+        [else
+         (cons (advance-missile (first lom))
+               (list-of-missile (rest lom)))]))
 
 
+;; Missile -> Missile
+;; Produce the next missile x,y positions on the screen by (subtract MISSILE-SPEED from the y)
+
+(check-expect (advance-missile M1) (make-missile 150  (-  300 MISSILE-SPEED)))
+(check-expect (advance-missile M2) (make-missile (invader-x I1) (- (+ (invader-y I1) 10) MISSILE-SPEED)))
+(check-expect (advance-missile M3) (make-missile (invader-x I1) (-  (+ (invader-y I1)  5) MISSILE-SPEED)))
+
+;(define (advance-missile m) m) ;stub
+
+;; Took template from Missile
+
+(define (advance-missile m)
+  (make-missile  (missile-x m) (- (missile-y m) MISSILE-SPEED)))
 
 ;; Tank -> Tank
 ;; Produce the next tank x position and it's dir on the screen
@@ -429,6 +456,7 @@
 (define (handle-key s ke)
   (cond [(key=? ke "left") (make-game (game-invaders s) (game-missiles s) (tank-diraction (game-tank s) "left"))]
         [(key=? ke "right") (make-game (game-invaders s) (game-missiles s) (tank-diraction (game-tank s) "right"))]
+        [(key=? ke " ") (make-game (game-invaders s) (new-missile (game-missiles s) (game-tank s)) (game-tank s))]
         [else  s]))
 
 
@@ -454,3 +482,24 @@
           (string=? ke "right")
           (= (tank-dir t) -1)) (make-tank (tank-x t) 1)]
         [else  t]))
+
+
+
+;; ListOfMissile Tank -> ListOfMissile
+;; Add new missile to the missile list
+(check-expect (new-missile empty T0) (cons (make-missile (tank-x T0) (- HEIGHT (image-height TANK))) empty))
+(check-expect (new-missile LOM2  T1)
+              (cons (make-missile 150 300)
+                    (cons (make-missile (invader-x I1) (+ (invader-y I1) 10))
+                          (cons (make-missile (invader-x I1) (+ (invader-y I1)  5))
+                                (cons (make-missile (tank-x T1) (- HEIGHT (image-height TANK))) empty)))))
+
+;(define (new-missile lom t) empty) ;stub
+
+;; Took template from ListOfDrop
+
+(define (new-missile lom t)
+  (cond [(empty? lom) (cons (make-missile (tank-x t) (- HEIGHT (image-height TANK))) empty)]
+        [else
+         (cons (first lom) (new-missile (rest lom) t))]))
+
