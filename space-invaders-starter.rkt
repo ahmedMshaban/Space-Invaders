@@ -80,7 +80,7 @@
 (define I1 (make-invader 150 100 1.5))           ;not landed, moving right
 (define I2 (make-invader 150 HEIGHT -1.5))       ;exactly landed, moving left
 (define I3 (make-invader 150 (+ HEIGHT 10) 1.5)) ;> landed, moving right
-
+(define I4 (make-invader 150 100 -1.5)) ;> landed, moving right
 
 #;
 (define (fn-for-invader invader)
@@ -157,7 +157,7 @@
 (define G1 (make-game empty empty T1))
 (define G2 (make-game (list I1) (list M1) T1))
 (define G3 (make-game (list I1 I2) (list M1 M2) T1))
-
+(define G4 (make-game (list I1 I2 I4) (list M1 M2) T1))
 
 ;; =================
 ;; Functions:
@@ -232,20 +232,24 @@
 
 (define (advance-invader invader)
   (cond [(and
-          (>= (invader-x invader) WIDTH)
+          (>= (invader-x invader) (- WIDTH (/ (image-width INVADER) 2)) )
           (positive? (invader-dx invader)))
          (make-invader (- WIDTH (/ (image-width INVADER) 2)) (+ (invader-y invader) INVADER-Y-SPEED) (- INVADER-X-SPEED))]
         [(and
-          (<= (invader-x invader) 0)
+          (<= (invader-x invader) (/ (image-width INVADER) 2))
           (negative? (invader-dx invader)))
          (make-invader (/ (image-width INVADER) 2) (+ (invader-y invader) INVADER-Y-SPEED) INVADER-X-SPEED)]
         [(negative? (invader-dx invader)) (make-invader (- (invader-x invader) INVADER-X-SPEED) (+ (invader-y invader) INVADER-Y-SPEED) (invader-dx invader)) ]
         [else (make-invader (+ (invader-x invader) INVADER-X-SPEED) (+ (invader-y invader) INVADER-Y-SPEED) (invader-dx invader))]))
 
+
+
 ;; ListOfMissile -> ListOfMissile
 ;; Produce the next missile x,y positions on the screen
 ;; !!!
 (define (advance-missile lom) lom) ;stub
+
+
 
 ;; Tank -> Tank
 ;; Produce the next tank x position and it's dir on the screen
@@ -280,11 +284,16 @@
 ;; Game -> Image
 ;; render the game
 (check-expect (render-game (make-game empty empty T0))
-              (place-image TANK (tank-x-posn T0) (- HEIGHT TANK-HEIGHT/2) (invader-image LOI2 LOM2)))
+              (place-image TANK (tank-x-posn T0) (- HEIGHT TANK-HEIGHT/2) (invader-image empty empty)))
 (check-expect (render-game (make-game LOI2 LOM2 T1))
               (place-image TANK (tank-x-posn T1) (- HEIGHT TANK-HEIGHT/2) (invader-image LOI2 LOM2)))
 
-(define (render-game s) BACKGROUND) ;stub
+;(define (render-game s) BACKGROUND) ;stub
+
+;; Took template from Game
+
+(define (render-game s)
+  (place-image TANK (tank-x-posn (game-tank s)) (- HEIGHT TANK-HEIGHT/2) (invader-image (game-invaders s) (game-missiles s))))
 
 
 
@@ -350,8 +359,49 @@
 
 ;; ListOfMissile -> Image
 ;; Produce an image from the given ListOfMissile, if empty return BACKGROUND
-;; !!!
-(define (misslie-image lom) BACKGROUND) ;stub
+(check-expect (misslie-image LOM1) BACKGROUND)
+(check-expect (misslie-image LOM2)
+              (place-image MISSILE 150 300
+                           (place-image MISSILE (invader-x I1) (+ (invader-y I1) 10)
+                                        (place-image MISSILE (invader-x I1) (+ (invader-y I1)  5) BACKGROUND))))
+ 
+;(define (misslie-image lom) BACKGROUND) ;stub
+
+;; Took template from ListOfMissile
+
+(define (misslie-image lom)
+  (cond [(empty? lom) BACKGROUND]
+        [else
+         (place-image  MISSILE (missile-x-posn (first lom)) (missile-y-posn (first lom))
+              (misslie-image (rest lom)))]))
+
+
+;; Missile -> Number
+;; Produce the Misslie current x position
+(check-expect (missile-x-posn M1) 150)
+(check-expect (missile-x-posn M2) (invader-x I1))
+               
+;(define (missile-x-posn m) 0) ;stub
+
+;; took template from Missile
+
+(define (missile-x-posn m)
+  (missile-x m))
+
+
+
+;; Missile -> Number
+;; Produce the Misslie current y position
+(check-expect (missile-y-posn M1) 300)
+(check-expect (missile-y-posn M2) (+ (invader-y I1) 10))
+
+;(define (missile-y-posn invader) 0) ;stub
+
+;; took template from Missile
+
+(define (missile-y-posn m)
+  (missile-y m))
+
 
 ;; Game -> Boolean
 ;; When Invader reaches the bottom of the screen, the game is over. 
