@@ -16,8 +16,6 @@
 (define TANK-SPEED 2)
 (define MISSILE-SPEED 10)
 
-(define HIT-RANGE 10)
-
 (define INVADE-RATE 100)
 
 (define BACKGROUND (empty-scene WIDTH HEIGHT))
@@ -38,6 +36,8 @@
 
 (define MISSILE (ellipse 5 15 "solid" "red"))
 
+(define HIT-RANGE-X (+ (/ (image-width INVADER) 2) (/ (image-width MISSILE) 2)))
+(define HIT-RANGE-Y (+ (/ (image-height INVADER) 2) (/ (image-height MISSILE) 2)))
 
 
 ;; Data Definitions:
@@ -157,7 +157,7 @@
 (define G1 (make-game empty empty T1))
 (define G2 (make-game (list I1) (list M1) T1))
 (define G3 (make-game (list I1 I2) (list M1 M2) T1))
-(define G4 (make-game (list I1 I2 I4) (list M1 M2) T1))
+(define G4 (make-game (list I1 I2 I4) empty T1))
 
 ;; =================
 ;; Functions:
@@ -177,23 +177,84 @@
 ;; Game is (make-game  ListOfInvader ListOfMissile Tank)
 (check-expect (advance-game
                (make-game empty empty T0)) 
-              (make-game  (list-of-invader LOI1) (list-of-missile empty) (advance-tank T0)))
+              (make-game  (list-of-invader (invader-collisions empty empty)) (list-of-missile  empty) (advance-tank T0)))
 (check-expect (advance-game
                (make-game LOI2 LOM2 T1))
-              (make-game (list-of-invader LOI2) (list-of-missile LOM2) ( advance-tank T1)))
+              (make-game (list-of-invader (invader-collisions LOI2 LOM2)) (list-of-missile LOM2) ( advance-tank T1)))
 
 ;(define (advance-game s) s) ;stub
 
 ;; Took template from Game
 
 (define (advance-game s)
-  (make-game (list-of-invader (game-invaders s))
+  (make-game (list-of-invader (invader-collisions (game-invaders s) (game-missiles s)))
              (list-of-missile (game-missiles s))
              (advance-tank (game-tank s))))
 
 
+;; ListOfInvader ListOfMissile -> ListOfInvader
+;; produce a list of invader without the collisions invaders
+(check-expect (invader-collisions empty empty) empty)
+(check-expect (invader-collisions LOI2 (cons (make-missile 150 300)
+                                             (cons (make-missile (+ 150 (- HIT-RANGE-X 1)) HEIGHT)
+                                                   (cons (make-missile 150 (+ HEIGHT (- HIT-RANGE-Y 1))) empty))))
+              (cons (make-invader 150 100 12) empty))
+
+ 
+;(define (invader-collisions loi lom) empty) ;stub
+
+;; Took template from ListOfInvader
+
+(define (invader-collisions loi lom)
+  (cond [(empty? loi) empty]
+        [else
+         (if  (not (invader-collision? (first loi) (list-of-missile lom)))
+              (cons (first loi) (invader-collisions (rest loi) lom))
+              (invader-collisions (rest loi) lom))]))
+
+
+
+;; Inavder ListOfMissile -> Boolean
+;; Produce true if there is collision, otherwise false
+(check-expect (invader-collision? I1 empty) false)
+(check-expect (invader-collision? I2 (cons (make-missile 150 300)
+                                             (cons (make-missile (+ 150 (- HIT-RANGE-X 1)) HEIGHT)
+                                                   (cons (make-missile 150 (+ HEIGHT (- HIT-RANGE-Y 1))) empty)))) true)
+(check-expect (invader-collision? I3 (cons (make-missile 150 300)
+                                             (cons (make-missile (+ 150 (- HIT-RANGE-X 1)) HEIGHT)
+                                                   (cons (make-missile 150 (+ HEIGHT (- HIT-RANGE-Y 1))) empty)))) true)
+(check-expect (invader-collision? I4 (cons (make-missile 150 300)
+                                             (cons (make-missile (+ 150 (- HIT-RANGE-X 1)) HEIGHT)
+                                                   (cons (make-missile 150 (+ HEIGHT (- HIT-RANGE-Y 1))) empty)))) false)
+(check-expect (invader-collision? (make-invader 151.5 101.5 12) (cons  (make-missile 150 290)
+                                             (cons (make-missile 150 100)
+                                                   (cons (make-missile 150 95) empty)))) true)
+
+;(define (invader-collision? loi lom) false) ;stub
+
+(define (invader-collision? invader lom)
+  (cond [(empty? lom) false]
+        [else
+           (if (and
+                (and
+                 (< (- (invader-x invader) (missile-x (first lom))) HIT-RANGE-X)
+                 (> (- (invader-x invader) (missile-x (first lom))) (* HIT-RANGE-X -1)))
+               (and
+                 (< (- (invader-y invader) (missile-y (first lom))) HIT-RANGE-Y)
+                 (> (- (invader-y invader) (missile-y (first lom))) (* HIT-RANGE-Y -1))))
+               true
+               (invader-collision? invader (rest lom)))]))
+
+
+;; ListOfInvader ListOfMissile -> ListOfMissile
+;; produce a list of missile without the collisions missiles
+;; !!!
+(define (missile-collisions loi lom) empty) ;stub
+
+     
+
 ;; ListOfInvader -> ListOfInvader
-;; Produce a list of invadres with the correct x,y and dx values
+;; produce ticked list of invader
 (check-expect (list-of-invader empty) empty)
 (check-expect (list-of-invader
                (cons (make-invader 150 100 1.5)
@@ -286,7 +347,7 @@
 
 
 ;; Missile -> Boolean
-;; Product true if the Missile outside-world, otherwise false
+;; Produce true if the Missile outside-world, otherwise false
 (check-expect (outside-world? (make-missile 20 30)) false)
 (check-expect (outside-world? (make-missile 50 0)) true) 
 
@@ -296,6 +357,7 @@
 
 (define (outside-world? m)
   (<= (missile-y m) 0))
+
 
 
 
@@ -327,6 +389,7 @@
          (make-tank (/ (image-width TANK) 2) (* (tank-dir t) -1))]
         [(= (tank-dir t)  1) (make-tank (+ (tank-x t) TANK-SPEED) (tank-dir t))]
         [(= (tank-dir t) -1) (make-tank (- (tank-x t) TANK-SPEED) (tank-dir t))]))
+
 
 
 ;; Game -> Image
@@ -523,4 +586,12 @@
   (cond [(empty? lom) (cons (make-missile (tank-x t) (- HEIGHT (image-height TANK))) empty)]
         [else
          (cons (first lom) (new-missile (rest lom) t))]))
+
+
+
+#;(place-image MISSILE 150 300
+             (place-image INVADER (+ 150 HIT-RANGE-X) 300 BACKGROUND))
+
+#;(place-image MISSILE  (invader-x I1) (+ (invader-y I1) HIT-RANGE)
+             (place-image INVADER (invader-x I1) (invader-y I1) BACKGROUND))
 
