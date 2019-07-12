@@ -168,7 +168,7 @@
 ;; 
 (define (main s)
   (big-bang s                        ; Game
-    (on-tick   advance-game)         ; Game -> Game
+    (on-tick   advance-game 0.001)         ; Game -> Game
     (to-draw    render-game)         ; Game -> Image
     (stop-when    stop-game)         ; Game -> Boolean
     (on-key      handle-key)))       ; Game KeyEvent -> Game
@@ -176,21 +176,39 @@
 ;; Game -> Game
 ;; produce the next game
 ;; Game is (make-game  ListOfInvader ListOfMissile Tank)
-(check-expect (advance-game
+(check-random (advance-game
                (make-game empty empty T0)) 
-              (make-game  (list-of-invader (invader-collisions empty empty)) (list-of-missile  (missile-collisions empty empty)) (advance-tank T0)))
-(check-expect (advance-game
+              (make-game  (new-invader (list-of-invader (invader-collisions empty empty))) (list-of-missile  (missile-collisions empty empty)) (advance-tank T0)))
+(check-random (advance-game
                (make-game LOI2 LOM2 T1))
-              (make-game (list-of-invader (invader-collisions LOI2 LOM2)) (list-of-missile (missile-collisions LOM2 LOI2)) (advance-tank T1)))
+              (make-game (new-invader (list-of-invader (invader-collisions LOI2 LOM2))) (list-of-missile (missile-collisions LOM2 LOI2)) (advance-tank T1)))
 
 ;(define (advance-game s) s) ;stub
 
 ;; Took template from Game
 
 (define (advance-game s)
-  (make-game (list-of-invader (invader-collisions (game-invaders s) (game-missiles s)))
+  (make-game (new-invader (list-of-invader (invader-collisions (game-invaders s) (game-missiles s))))
              (list-of-missile (missile-collisions (game-missiles s) (game-invaders s)))
              (advance-tank (game-tank s))))
+
+
+;; ListOfInvader -> ListOfInvader
+;; produce a new invader by add it the invader list
+(check-random (new-invader empty) (cons (make-invader (random WIDTH) 0 1.5) empty))
+(check-random (new-invader (cons (make-invader 35 44 -1.5) empty))
+              (cons (make-invader 35 44 -1.5)
+                    (cons (make-invader (random WIDTH) 0 1.5) empty)))
+
+;(define (new-invader loi) loi) ;stub
+
+;; Took template from ListOfInvader
+
+(define (new-invader loi)
+  (cond [(empty? loi) (cons (make-invader (random WIDTH) 0 1.5) empty)]
+        [else
+         (cons (first loi) (new-invader (rest loi)))]))
+
 
 
 ;; ListOfInvader ListOfMissile -> ListOfInvader
@@ -658,4 +676,3 @@
   (cond [(empty? lom) (cons (make-missile (tank-x t) (- HEIGHT (image-height TANK))) empty)]
         [else
          (cons (first lom) (new-missile (rest lom) t))]))
-
