@@ -156,9 +156,9 @@
 
 (define G0 (make-game empty empty T0))
 (define G1 (make-game empty empty T1))
-(define G2 (make-game (list I1) (list M1) T1))
-(define G3 (make-game (list I1 I2) empty T1))
-(define G4 (make-game (list I1 I2 I4 I5) empty T1))
+(define G2 (make-game (list I1 I4) (list M1) T1))
+(define G3 (make-game (list I1 I4 I5) empty T1))
+(define G4 (make-game (list I1 I4 I5) empty T1))
 
 ;; =================
 ;; Functions:
@@ -560,9 +560,37 @@
 
 ;; Game -> Boolean
 ;; When Invader reaches the bottom of the screen, the game is over. 
-;; !!!
-(define (stop-game s) false) ;stub
+(check-expect (stop-game (make-game empty empty T0)) false)
+(check-expect (stop-game (make-game LOI2 LOM2 T1)) true)
 
+;(define (stop-game s) false) ;stub
+
+;; Took tempalte from Game
+
+(define (stop-game s)
+  (fall-off? (game-invaders s))
+       )
+
+
+;; ListOfInvader -> Boolean
+;; produce true if the invader reaches the bottom of the screen, otherwise false
+(check-expect (fall-off? empty) false)
+(check-expect (fall-off?
+               (cons (make-invader 150 100 1.5)
+                     (cons (make-invader 150 HEIGHT -1.5)
+                           (cons (make-invader 150 (+ HEIGHT 10) 1.5) empty))))
+              true)
+
+;(define (fall-off? loi) false) ;stub
+
+;; Took the template from ListOfInvader
+
+(define (fall-off? loi)
+  (cond [(empty? loi) false]
+        [else
+         (if (> (invader-y (first loi)) HEIGHT)
+             true
+             (fall-off? (rest loi)))]))
 
 
 ;; Game KeyEvent -> Game
