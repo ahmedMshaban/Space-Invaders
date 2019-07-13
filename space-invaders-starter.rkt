@@ -186,22 +186,33 @@
 
 ;; ListOfInvader -> ListOfInvader
 ;; produce a new invader by add it the invader list, when the list has less than 5 invaders
-(check-random (new-invader empty) (cons (make-invader (random WIDTH) 0  1.5) empty))
+(check-random (new-invader empty) (cons (make-invader (random WIDTH) 0  (random-direction (random 100))) empty))
 (check-random (new-invader (cons (make-invader 35 44 -1.5) empty))
               (cons (make-invader 35 44 -1.5)
-                    (cons (make-invader (random WIDTH) 0 1.5) empty)))
+                    (cons (make-invader (random WIDTH) 0 (random-direction (random 100))) empty)))
 
 ;(define (new-invader loi) loi) ;stub
 
 ;; Took template from ListOfInvader
 
 (define (new-invader loi)
-  (cond [(empty? loi) (cons (make-invader (random WIDTH) 0 1.5) empty)]
+  (cond [(empty? loi) (cons (make-invader (random WIDTH) 0 (random-direction (random 100))) empty)]
         [else
          (if (< (length loi) INVADE-RATE)
              (cons (first loi) (new-invader (rest loi)))
              loi)]))
 
+;; Number -> Number
+;; produce 1.5 if the result of the random is even, else produce -1.5
+(check-expect (random-direction 100) 1.5)
+(check-expect (random-direction 3) -1.5)
+
+;(define (random-direction n) 1.5) ;stub
+
+(define (random-direction n)
+     (if (= (remainder n 2) 0)
+         1.5
+         -1.5))
 
 
 ;; ListOfInvader ListOfMissile -> ListOfInvader
